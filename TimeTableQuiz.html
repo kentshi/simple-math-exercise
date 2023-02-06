@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="author" content="Kent Shi kenjishin@gmail.com">
+  <title>九九乘法心算题</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <style lang="css">
+    body {
+      font-family: 'Rubik', sans-serif;
+      font-weight: 400;
+    }
+
+    .btn,
+    .text-bold {
+      font-weight: 700;
+    }
+
+    .bg-wheat{
+      background-color: rgb(255, 215, 162);
+    }
+
+    .bg-green{
+      background-color: rgb(102, 255, 171);
+    }
+
+    .bg-violet{
+      background-color: rgb(106, 90, 205);
+    }
+
+    .bg-pink{
+      background-color: rgb(238, 130, 238);
+    }
+
+    .bg-blue{
+      background-color: rgb(81, 81, 255);
+    }
+
+    .bg-red{
+      background-color: rgb(255, 88, 88);
+    }
+
+    .material-icons {
+      font-family: 'Material Icons';
+      font-weight: normal;
+      font-style: normal;
+      font-size: 24px;
+      /* Preferred icon size */
+      display: inline-block;
+      line-height: 1;
+      text-transform: none;
+      letter-spacing: normal;
+      word-wrap: normal;
+      white-space: nowrap;
+      direction: ltr;
+
+      /* Support for all WebKit browsers. */
+      -webkit-font-smoothing: antialiased;
+      /* Support for Safari and Chrome. */
+      text-rendering: optimizeLegibility;
+
+      /* Support for Firefox. */
+      -moz-osx-font-smoothing: grayscale;
+
+      /* Support for IE. */
+      font-feature-settings: 'liga';
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app" class="position-relative">
+    <div class="position-absolute min-vh-100 h-100 vw-100" :class="bgColorClass" style="z-index: -1; top: 0px; left: 0px;"></div>
+    <div class="container mx-auto p-3 p-lg-5">
+      <h1 class="text-center mb-3 mb-lg-5">九九乘法心算题</h1>
+      <div class="d-md-flex justify-content-between align-content-center px-2">
+        <div class="mb-3 mb-lg-0">
+          <button class="btn btn-primary w-100" @click="generateQuestions">Start Quiz</button>
+        </div>
+        <div class="flex-grow-1 d-flex align-items-center justify-content-end text-bold">
+          <h3 class="flex-grow-1 text-center">Level {{ currentLevel }}</h3>
+          <div class="alert alert-warning mx-3 mb-0">{{ timer }}</div>
+          <div class="alert alert-default mb-0">{{ mark }} / 10</div>
+        </div>
+      </div>
+  
+      <div class="mx-auto row flex-wrap" v-show="questions.length > 0">
+        <div class="col-md-6 my-1 my-md-2 px-2" v-for="(item, index) in questions" :key="index">
+          <div class="input-group alert alert-info ">
+            <div class="input-group-prepend">
+              <span class="input-group-text">
+                Q{{index + 1}}: {{ item.question }} =
+              </span>
+            </div>
+            <input class="form-control" :readonly="timerStopped" v-model.number="answers[index]" type="number" />
+            <div class="input-group-append">
+              <span class="input-group-text " v-show="answers[index] > 0 && answers[index] === item.answer">
+                <span class="material-icons text-success">done</span>
+              </span>
+              <span class="input-group-text " v-show="answers[index] > 0 && answers[index] !== item.answer">
+                <span class="material-icons text-danger" data-bs-toggle="tooltip"
+                  :title="'Correct Answer:' + item.answer">bug_report</span>
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="w-100 my-2 d-flex justify-content-between">
+          <div class="btn btn-primary my-2" @click="stopTimer()" :class="{ 'btn-secondary' : timerStopped, 'btn-primary': !timerStopped}">I'm Done</div>
+          <div class="btn btn-success my-2" @click="nextLevel()" v-if="pastCurentLevel && timerStopped">NEXT LEVEL ></div>
+          <div class="btn btn-warning my-2" @click="resetGame()">NEW GAME</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const { createApp } = Vue
+
+    createApp({
+      data() {
+        return {
+          currentLevel: 1,
+          questions: [],
+          answers: [],
+          startTimer: 0,
+          roundTime: false,
+          timer: 0,
+          timeOut: null,
+          timerStopped: true,
+        }
+      },
+      computed: {
+        mark() {
+          let total = 0;
+          for (let index = 0; index < this.answers.length; index++) {
+            if (this.answers[index] === this.questions[index]['answer']) {
+              total++;
+            }
+          }
+          return total;
+        },
+        roundTimeLimit() {
+          return this.currentLevel * 20;
+        },
+        pastCurentLevel(){
+          if(this.roundTime <= this.roundTimeLimit){
+            if(this.currentLevel > 5){
+              if(this.mark > 6){
+                return true;
+              }
+            }
+            if(this.currentLevel >= 3){
+              if(this.mark > 7){
+                return true;
+              }
+            }
+            if(this.mark > 8){
+              return true;
+            }
+          }
+          return false;
+        },
+        bgColorClass(){
+          let response = '';
+          switch (this.currentLevel) {
+            case 1:
+              response = 'bg-light';
+              break;
+            case 2:
+              response = 'bg-wheat';
+              break;
+            case 3:
+              response = 'bg-green';
+              break;
+            case 4:
+              response = 'bg-violet';
+              break;
+            case 5:
+              response = 'bg-pink';
+              break;
+            case 6:
+              response = 'bg-blue';
+              break;
+            default:
+              response = 'bg-red';
+              break;
+          }
+          return response;
+        }
+      },
+      methods: {
+        getRandomNumber() {
+          let random_number = 0;
+          do {
+            random_number = Math.floor(Math.random() * (this.currentLevel * 10));
+          } while (random_number === 0);
+          return random_number;
+        },
+        getTime(){
+          let d = new Date();
+          return d.getTime();
+        },
+        getTimer(){
+          let d = this.getTime();
+          let d_diff = d - this.startTimer;
+          let s = Math.floor(d_diff / 1000);
+          this.roundTime = s;
+          let m = Math.floor(s/60);
+          this.timer = ("0" + m).substr(-2) + ":" + ("0" + (s - m*60)).substr(-2);
+        },
+        stopTimer(){
+          this.showToolTip();
+          clearInterval(this.timeOut);
+          this.timerStopped = true;
+          if(this.pastCurentLevel){
+            Swal.fire({
+              title: "Congrats!",
+              text: "Press the NEXT LEVEL button to continue.",
+              icon: "success"
+            });
+          }else{
+            Swal.fire({
+              title: "Well Done!",
+              text: "Please try harder next time.",
+              icon: "warning"
+            });
+          }
+        },
+        generateQuestions() {
+          this.questions = [];
+          this.answers = [];
+          this.timer = '';
+          this.roundTime = false;
+          this.startTimer = this.getTime();
+          clearInterval(this.timeOut);
+          for (let index = 0; index < 10; index++) {
+            let number1 = this.getRandomNumber();
+            let number2 = this.getRandomNumber();
+            let product = number1 * number2;
+            this.questions.push({
+              question: number1 + ' X ' + number2,
+              answer: product
+            });
+          }
+          this.timeOut = setInterval(() => this.getTimer(), 1000);
+          this.timerStopped = false;
+        },
+        showToolTip() {
+          var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+          var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+          })
+        },
+        resetGame(){
+          Swal.fire({
+            title: "Start Over?",
+            text: "Are you sure you want to start over again?",
+            icon: "question",
+            showCancelButton: true,
+          }).then(response => {
+            if(response.isConfirmed){
+              this.currentLevel = 1;
+              this.generateQuestions();
+            }
+          });
+        },
+        nextLevel(){
+          this.currentLevel += 1;
+          this.generateQuestions();
+        }
+      },
+    }).mount('#app')
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous">
+  </script>
+</body>
+
+</html>

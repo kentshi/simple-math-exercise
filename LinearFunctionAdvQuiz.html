@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="author" content="Kent Shi kenjishin@gmail.com">
+  <title>Linear Functions Advanced</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <style lang="css">
+    body {
+      font-family: 'Rubik', sans-serif;
+      font-weight: 400;
+    }
+
+    .btn,
+    .text-bold {
+      font-weight: 700;
+    }
+
+    .bg-wheat{
+      background-color: rgb(255, 215, 162);
+    }
+
+    .bg-green{
+      background-color: rgb(102, 255, 171);
+    }
+
+    .bg-violet{
+      background-color: rgb(106, 90, 205);
+    }
+
+    .bg-pink{
+      background-color: rgb(238, 130, 238);
+    }
+
+    .bg-blue{
+      background-color: rgb(81, 81, 255);
+    }
+
+    .bg-red{
+      background-color: rgb(255, 88, 88);
+    }
+
+    .material-icons {
+      font-family: 'Material Icons';
+      font-weight: normal;
+      font-style: normal;
+      font-size: 24px;
+      /* Preferred icon size */
+      display: inline-block;
+      line-height: 1;
+      text-transform: none;
+      letter-spacing: normal;
+      word-wrap: normal;
+      white-space: nowrap;
+      direction: ltr;
+
+      /* Support for all WebKit browsers. */
+      -webkit-font-smoothing: antialiased;
+      /* Support for Safari and Chrome. */
+      text-rendering: optimizeLegibility;
+
+      /* Support for Firefox. */
+      -moz-osx-font-smoothing: grayscale;
+
+      /* Support for IE. */
+      font-feature-settings: 'liga';
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app" class="position-relative">
+    <div class="position-absolute min-vh-100 h-100 vw-100" :class="bgColorClass" style="z-index: -1; top: 0px; left: 0px;"></div>
+    <div class="container mx-auto p-3 p-lg-5 overflow-hidden">
+      <h1 class="text-center mb-3 mb-lg-5">Linear Functions (Advanced)</h1>
+      <div class="d-md-flex justify-content-between align-content-center px-2">
+        <div class="mb-3 mb-lg-0">
+          <button class="btn btn-primary w-100" @click="generateQuestions">Start Quiz</button>
+        </div>
+        <div class="flex-grow-1 d-flex align-items-center justify-content-end text-bold">
+          <h3 class="flex-grow-1 text-center">Round {{ currentLevel }}</h3>
+          <div class="alert alert-warning mx-3 mb-0">{{ timer }}</div>
+          <div class="alert alert-default mb-0">{{ mark }} / 10</div>
+        </div>
+      </div>
+  
+      <div class="mx-auto row flex-wrap" v-show="questions.length > 0">
+        <div class="col-md-6 my-1 my-md-2 px-2" v-for="(item, index) in questions" :key="index">
+          <div class="d-flex alert alert-info ">
+            <div class="col-6 col-lg-4 d-flex align-items-start">
+              <span>Q{{index + 1}}:</span>
+              <div class="mx-1 d-flex flex-column align-items-start">
+                <div v-for="question,key in item.question" :key="key">
+                  {{ question.question }}
+                </div>
+              </div>
+            </div>
+
+            <div class="col-4 col-lg-6">
+              <div class="d-flex flex-column flex-lg-row align-items-start">
+                <div class="input-group">
+                  <div class="input-group-prepend">
+                    <span class="input-group-text bg-dark text-white">
+                      A = 
+                    </span>
+                  </div>
+                  <input class="form-control" :readonly="timerStopped" v-model.number="answersX[index]" type="number" />  
+                </div>
+                <div class="input-group">
+                  <div class="input-group-prepend">
+                    <span class="input-group-text bg-dark text-white">
+                      B = 
+                    </span>
+                  </div>
+                  <input class="form-control" :readonly="timerStopped" v-model.number="answersY[index]" type="number" />
+                </div>
+              </div>
+            </div>
+            
+            <div class="col-2 input-group align-items-start">
+              <span class="input-group-text " v-show="answerIsCorrect(index)">
+                <span class="material-icons text-success">done</span>
+              </span>
+              <span class="input-group-text " v-show="answerIsIncorrect(index)">
+                <span class="material-icons text-danger" data-bs-toggle="tooltip"
+                  :title="'Correct Answer:' + printAnswer(item.answer)">bug_report</span>
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="w-100 my-2 d-flex justify-content-between">
+          <div class="btn my-2" @click="stopTimer()" :class="{ 'btn-secondary' : timerStopped, 'btn-primary': !timerStopped}">I'm Done</div>
+          <div class="btn btn-success my-2" @click="nextLevel()" v-if="pastCurentLevel && timerStopped">NEXT LEVEL ></div>
+          <div class="btn btn-warning my-2" @click="resetGame()">NEW GAME</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script lang="typescript">
+    const { createApp } = Vue
+
+    createApp({
+      data() {
+        return {
+          currentLevel: 1,
+          questions: [],
+          answersX: [],
+          answersY: [],
+          startTimer: 0,
+          roundTime: false,
+          timer: 0,
+          timeOut: null,
+          timerStopped: true,
+        }
+      },
+      computed: {
+        mark() {
+          let total = 0;
+          for (let index = 0; index < this.questions.length; index++) {
+            if (this.answerIsCorrect(index)) {
+              total++;
+            }
+          }
+          return total;
+        },
+        roundTimeLimit() {
+          return 999;
+        },
+        pastCurentLevel(){
+          if(this.roundTime <= this.roundTimeLimit){
+            if(this.currentLevel > 5){
+              if(this.mark > 6){
+                return true;
+              }
+            }
+            if(this.currentLevel >= 3){
+              if(this.mark > 7){
+                return true;
+              }
+            }
+            if(this.mark > 8){
+              return true;
+            }
+          }
+          return false;
+        },
+        bgColorClass(){
+          let response = '';
+          switch (this.currentLevel) {
+            case 1:
+              response = 'bg-light';
+              break;
+            case 2:
+              response = 'bg-wheat';
+              break;
+            case 3:
+              response = 'bg-green';
+              break;
+            case 4:
+              response = 'bg-violet';
+              break;
+            case 5:
+              response = 'bg-pink';
+              break;
+            case 6:
+              response = 'bg-blue';
+              break;
+            default:
+              response = 'bg-red';
+              break;
+          }
+          return response;
+        }
+      },
+      methods: {
+        getRandomNumber(limit){
+          if(typeof limit == "undefined"){
+            limit = 10;
+          }
+          let random_number = 0;
+          do {
+            random_number = Math.floor(Math.random() * parseInt(limit));
+          } while (random_number === 0);
+          return random_number;
+        },
+        getRandomOperator(){
+          const operators = ['+', '-', 'x', '/'];
+          let index = Math.floor(Math.random() * 2);
+          if(this.currentLevel > 3){
+            index = Math.floor(Math.random() * 4);
+          }
+          return operators[index];
+        },
+        getAnswer(number1, number2, operator){
+          let answer = 0;
+          switch (operator) {
+            case '+':
+              answer = number1 + number2;
+              break;
+            case '-':
+              answer = number1 - number2;
+              break;
+            case 'x':
+            case '/':
+              answer = number1 * number2;
+              break;
+            default:
+              break;
+          }
+          return answer;
+        },
+        getRandomQuestion(x, y){
+          let operation = this.getRandomOperator();
+          let rand1 = this.getRandomNumber(3 + this.currentLevel);
+          let rand2 = this.getRandomNumber(3 + this.currentLevel);
+          while (rand1 === rand2) {
+            rand2 = this.getRandomNumber(3 + this.currentLevel);
+          }
+          let answer = this.getAnswer(x*rand1, y*rand2, operation);
+          let question = (rand1 > 1 ? rand1 : '') + 'A ' + operation + " " + (rand2 > 1 ? rand2 : '') + 'B = ' + answer;
+          if(operation === '/'){
+            question = answer + ' / ' + (rand1 > 1 ? rand1 : '') + 'A = ' + (rand2 > 1 ? rand2 : '') + 'B';
+          }
+          return {question: question, operation: operation, rand1: rand1, rand2: rand2};
+        },
+        getTime(){
+          let d = new Date();
+          return d.getTime();
+        },
+        getTimer(){
+          let d = this.getTime();
+          let d_diff = d - this.startTimer;
+          let s = Math.floor(d_diff / 1000);
+          this.roundTime = s;
+          let m = Math.floor(s/60);
+          this.timer = ("0" + m).substr(-2) + ":" + ("0" + (s - m*60)).substr(-2);
+        },
+        stopTimer(){
+          this.showToolTip();
+          clearInterval(this.timeOut);
+          this.timerStopped = true;
+          if(this.pastCurentLevel){
+            Swal.fire({
+              title: "Congrats!",
+              text: "Press the NEXT LEVEL button to continue.",
+              icon: "success"
+            });
+          }else{
+            Swal.fire({
+              title: "Well Done!",
+              text: "Please try harder next time.",
+              icon: "warning"
+            });
+          }
+        },
+        generateQuestions() {
+          this.questions = [];
+          this.answersX = [];
+          this.answersY = [];
+          this.timer = '';
+          this.roundTime = false;
+          this.startTimer = this.getTime();
+          clearInterval(this.timeOut);
+          const order = ['first', 'second'];
+          for (let index = 0; index < 10; index++) {
+            let number1 = this.getRandomNumber();
+            let number2 = this.getRandomNumber();
+            let eq1 = this.getRandomQuestion(number1, number2);
+            let eq2 = this.getRandomQuestion(number1, number2);
+            while(eq1.question === eq2.question){
+              eq2 = this.getRandomQuestion(number1, number2);
+            }
+            this.questions.push({
+              question:  {eq1: eq1, eq2: eq2},
+              answer: {a: number1, b: number2}
+            });
+          }
+          this.timeOut = setInterval(() => this.getTimer(), 1000);
+          this.timerStopped = false;
+        },
+        showToolTip() {
+          var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+          var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+          })
+        },
+        resetGame(){
+          Swal.fire({
+            title: "Start Over?",
+            text: "Are you sure you want to start over again?",
+            icon: "question",
+            showCancelButton: true,
+          }).then(response => {
+            if(response.isConfirmed){
+              this.currentLevel = 1;
+              this.generateQuestions();
+              window.scroll({
+                top: 1,
+                left: 1,
+                behavior: 'smooth'
+              });
+            }
+          });
+        },
+        nextLevel(){
+          this.currentLevel += 1;
+          this.generateQuestions();
+        },
+        verifyAnswer(equation, answer, number1, number2){
+          let operator = equation.operation;
+          let answerA = answer.a * equation.rand1;
+          let answerB = answer.b * equation.rand2;
+          let correctAnswer = this.getAnswer(answerA, answerB, operator);
+          let thisAnswer = this.getAnswer(number1 * equation.rand1, number2 * equation.rand2, operator);
+          return correctAnswer === thisAnswer;
+        },
+        validateAnswer(index){
+          let questions = this.questions[index];
+          let correctAnswer = questions.answer;
+          let eq1 = questions.question['eq1'];
+          let eq2 = questions.question['eq2'];
+          let response1 = this.verifyAnswer(eq1, correctAnswer, this.answersX[index], this.answersY[index]);
+          let response2 = this.verifyAnswer(eq2, correctAnswer, this.answersX[index], this.answersY[index]);
+          return response1 && response2;
+        },
+        answerIsCorrect(index){
+          if(this.answersX[index] > 0 && this.answersY[index] > 0){
+            return this.validateAnswer(index);
+          }
+          return false;
+        },
+        answerIsIncorrect(index){
+          if(this.answersX[index] > 0 && this.answersY[index] > 0){
+            return !this.validateAnswer(index);
+          }
+          return false;
+        },
+        printAnswer(answer){
+          return " A: " + answer["a"] + ", B: " + answer["b"];
+        }
+      },
+    }).mount('#app')
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous">
+  </script>
+</body>
+
+</html>
